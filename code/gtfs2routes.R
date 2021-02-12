@@ -17,7 +17,13 @@ tmap_mode("plot")
 # gtfs <- gtfs_merge(gtfs, force = TRUE)
 # gtfs_write(gtfs, "D:/OneDrive - University of Leeds/Data/UK2GTFS/GTFS/gtfs_20200326", "AllGB")
 
-gtfs <- gtfs_read("D:/OneDrive - University of Leeds/Data/UK2GTFS/GTFS/gtfs_20200326/AllGB.zip")
+#gtfs <- gtfs_read("D:/OneDrive - University of Leeds/Data/UK2GTFS/GTFS/gtfs_20200326/AllGB.zip")
+gtfs <- gtfs_read("D:/OneDrive - University of Leeds/Data/UK2GTFS/OpenBusData/GTFS/20210229/itm_all_gtfs.zip")
+gtfs_validate_internal(gtfs)
+gtfs <- gtfs_force_valid(gtfs)
+#gtfs_write(gtfs, "D:/OneDrive - University of Leeds/Data/UK2GTFS/GTFS/gtfs_20200326/", "AllGBvalid")
+
+foo <- gtfs$stops[is.na(gtfs$stops$stop_lat),]
 
 
 make_trip_geoms <- function(gtfs){
@@ -54,12 +60,19 @@ make_trip_geoms <- function(gtfs){
 
 
 countwd2 <- function(startdate, enddate, weekday){
+  if(is.na(startdate)){
+    return(0)
+  }
+  if(is.na(enddate)){
+    return(0)
+  }
   d <- as.integer(enddate - startdate) + 1
   d %/% 7 +
     (weekday %in% weekdays(seq(startdate, length.out=d %% 7, by=1)))
 }
 
-count_stops <- function(gtfs){
+
+count_stops <- function(gtfs, startdate, enddate){
   stop_times <- gtfs$stop_times
   trips <- gtfs$trips
   calendar <- gtfs$calendar
@@ -73,6 +86,7 @@ count_stops <- function(gtfs){
   # work out how many times the trip in run
   trips <- dplyr::left_join(trips, calendar, by = "service_id")
   trips <- dplyr::left_join(trips, calendar_days, by = "service_id")
+
   trips$runs_canceled[is.na(trips$runs_canceled)] <- 0
   trips$runs_extra[is.na(trips$runs_extra)] <- 0
 
@@ -102,7 +116,10 @@ count_stops <- function(gtfs){
     trips$runs_wednesday + trips$runs_thursday + trips$runs_friday +
     trips$runs_saturday + trips$runs_sunday + trips$runs_extra - trips$runs_canceled
 
-  trips$runs_per_week <- trips$runs_total / (as.numeric(trips$end_date - trips$start_date)/7)
+  trips$runs_per_week <- trips$runs_total / ((as.numeric(trips$end_date - trips$start_date) + 1)/7)
+
+  # Catch Single Day services
+  trips$runs_per_week <- ifelse(trips$start_date == trips$end_date, 1, trips$runs_per_week)
 
   trips <- trips[,c("trip_id","start_date","end_date","runs_total","runs_per_week")]
   stop_times <- dplyr::left_join(stop_times, trips, by = "trip_id")
@@ -122,9 +139,16 @@ summary(stops_with_count$stops_per_week)
 
 foo = stops_with_count[!is.na(stops_with_count$stop_lon),]
 foo = foo[!is.infinite(foo$stops_per_week),]
+foo = foo[!is.na(foo$stops_per_week),]
 foo = st_as_sf(foo, coords = c("stop_lon","stop_lat"), crs = 4326)
 summary(foo$stops_per_week)
+foo <- foo[,c("stop_code","stop_name","stops_per_week","geometry")]
 
+st_write(foo,"../../creds2/CarbonCalculator/data/busstops/openbusdata.geojson")
+
+bar <- foo[foo$stops_per_week == max(foo$stops_per_week),]
+
+qtm()
 
 
 # tm_shape(foo) +

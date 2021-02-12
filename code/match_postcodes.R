@@ -7,7 +7,7 @@ tmap_mode("view")
 
 # Get transaas postcodes
 transas <- readxl::read_xlsx("data/W1W2Postcodes_v1.xlsx")
-transas <- unique(transas$`Postcode 2`)
+transas <- unique(transas$`Postcode 1`, transas$`Postcode 2`)
 
 #clean format
 transas <- data.frame(postcode_original = transas,
