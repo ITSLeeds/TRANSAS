@@ -22,20 +22,32 @@ path_opt = "D:/OneDrive - University of Leeds/Data/opentripplanner/otp-1.5.0-sha
 opts_build = otp_make_config(type = "build")
 opts_build$matchBusRoutesToStreets = TRUE
 opts_build$osmWayPropertySet = "uk"
+opts_build$dataImportReport = TRUE
 otp_validate_config(opts_build)
 otp_write_config(opts_build, path_data, "great-britain")
 
 opts_router = otp_make_config(type = "router")
 opts_router$routingDefaults$driveOnRight = FALSE
+opts_router$timeouts <- c(20,10,5,3)
+
 otp_validate_config(opts_router)
 otp_write_config(opts_router, path_data, "great-britain")
+
+otp_dl_demo("D:/OneDrive - University of Leeds/Data/opentripplanner")
 
 log1 = otp_build_graph(path_opt,
                 path_data,
                 memory = 80000,
                 router = "great-britain")
 
-otp_setup(path_opt,
+# Parse the logs
+
+log_summary <- substr(log1, 14, nchar(log1))
+log_summary <- substr(log_summary, 1, 65)
+log_summary <- as.data.frame(table(log_summary))
+log_summary <- log_summary[order(log_summary$Freq, decreasing = TRUE),]
+
+log2 = otp_setup(path_opt,
           path_data,
           router = "great-britain",
           securePort = 8082,
@@ -44,6 +56,12 @@ otp_setup(path_opt,
           quiet = FALSE)
 
 otpcon <- otp_connect(router = "great-britain")
+
+
+
+
+
+
 
 postcodes <- read.csv("data/postcode_lookup.csv")
 cp  <- readRDS(paste0(substr(secure_path,1,39),"Postcodes/code_point_open.Rds"))
