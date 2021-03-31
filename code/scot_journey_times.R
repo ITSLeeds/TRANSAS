@@ -17,7 +17,7 @@ log2 = otp_setup(path_opt,
 
 otpcon <- otp_connect(router = "great-britain", port = 8091)
 
-#java -Xmx100000M -d64 -jar "D:/OneDrive - University of Leeds/Data/opentripplanner/otp-1.5.0-shaded.jar" --router great-britain --graphs "D:/OneDrive - University of Leeds/Data/opentripplanner/graphs" --server --port 8091 --securePort 8092 --analyst
+#java -Xmx100000M -d64 -jar "D:/OneDrive - University of Leeds/Data/opentripplanner/otp-1.5.0-shaded.jar" --router great-britain --graphs "D:/OneDrive - University of Leeds/Data/opentripplanner/graphs" --server --port 8091 --securePort 8092 --analyst --pointSets "D:/OneDrive - University of Leeds/Data/opentripplanner/pointsets"
 
 gp <- readRDS("data/GP-Scotland.Rds")
 #dz <- readRDS("data/datazone_centroids.Rds")
@@ -28,6 +28,8 @@ dz <- read_sf("data/datazone_centroids_mod.gpkg")
 schools <- readRDS("data/schools_scotland.Rds")
 schools_primary <- schools[schools$SchType == "Primary", ]
 schools_secondary <- schools[schools$SchType == "Secondary", ]
+
+food = readRDS("data/supermarkets.Rds")
 
 # For each DataZone get the nearest 5 GPs
 
@@ -41,14 +43,14 @@ toPlace <- gp[nn, ]
 
 routes <- otp_plan(otpcon, fromPlace = fromPlace, toPlace = toPlace,
                    fromID = fromPlace$DataZone, toID = toPlace$PracticeCode,
-                   mode = "CAR", ncores = 20, distance_balance = TRUE)
+                   mode = "CAR", ncores = 28, distance_balance = TRUE)
 
 saveRDS(routes, "data/routes_scotland_driving_gp.Rds")
 
 
 routes_cycle <- otp_plan(otpcon, fromPlace = fromPlace, toPlace = toPlace,
                    fromID = fromPlace$DataZone, toID = toPlace$PracticeCode,
-                   mode = "BICYCLE", ncores = 30, distance_balance = TRUE)
+                   mode = "BICYCLE", ncores = 28, distance_balance = TRUE)
 
 saveRDS(routes_cycle, "data/routes_scotland_cycle_gp.Rds")
 
@@ -67,7 +69,7 @@ for(i in 2:4){
                              fromID = fromPlace$DataZone[splitvec[[i]]],
                              toID = toPlace$PracticeCode[splitvec[[i]]],
                              mode = c("TRANSIT","WALK"),
-                             ncores = 30,
+                             ncores = 28,
                              distance_balance = FALSE,
                              date_time = lubridate::ymd_hms("2020-06-18 08:30:00"))
   res[[i]] <- routes_transit
@@ -120,7 +122,7 @@ for(i in 1:4){
                              fromID = fromPlace$DataZone[splitvec[[i]]],
                              toID = toPlace$SchUID[splitvec[[i]]],
                              mode = c("CAR"),
-                             ncores = 25,
+                             ncores = 28,
                              distance_balance = TRUE)
   routes[[i]] <- routes_part
 }
@@ -209,4 +211,50 @@ for(i in 1:4){
 routes_final <- dplyr::bind_rows(routes)
 saveRDS(routes_final, "data/routes_scotland_cycle_secondary_school.Rds")
 
+# Supermarkets
+food$id <- as.character(food$id)
 
+nn <- st_nn(dz, food, k = 5)
+nn <- unlist(nn)
+
+fromPlace <- dz[rep(1:nrow(dz), each = 5),]
+toPlace <- food[nn, ]
+
+
+routes <- otp_plan(otpcon, fromPlace = fromPlace, toPlace = toPlace,
+                   fromID = fromPlace$DataZone, toID = toPlace$id,
+                   mode = "CAR", ncores = 28, distance_balance = TRUE)
+
+saveRDS(routes, "data/routes_scotland_driving_food.Rds")
+
+miss_ps <- schools_secondary[!toPlace$id %in% routes$toPlace, ]
+miss_dz <- dz[!dz$DataZone %in% routes$fromPlace, ]
+
+qtm(miss_ps, dots.col = "red") +
+  qtm(dz)
+
+
+routes <- otp_plan(otpcon, fromPlace = fromPlace, toPlace = toPlace,
+                         fromID = fromPlace$DataZone, toID = toPlace$id,
+                         mode = "BICYCLE", ncores = 28, distance_balance = TRUE)
+
+saveRDS(routes_cycle, "data/routes_scotland_cycle_food.Rds")
+
+# Surface Tests
+food <- food[,"id"]
+food$id <- as.character(food$id)
+otp_pointset(food,"food",path_data)
+
+surfaceid <- otp_make_surface(otpcon, fromPlace = c(-2.269447, 57.0953), mode = "CAR")
+times <- otp_surface(otpcon, surface = surfaceid, "food") #started 11:37
+
+ttmatrix <- otp_traveltime(otpcon = otpcon,
+                           path_data,
+                           fromPlace = dz[1:5,],
+                           toPlace = food,
+                           fromID = dz$DataZone[1:5],
+                           toID = food$id,
+                           ncores = 1,
+                           mode = "BICYCLE")
+
+Sys.time()

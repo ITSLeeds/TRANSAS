@@ -123,4 +123,10 @@ town$id <- as.character(1:nrow(town))
 town <- st_transform(town, 4326)
 saveRDS(town,"data/towns_scotland.Rds")
 
+#Pharmacies - scotland
+pharm <- read_sf("D:/OneDrive - University of Leeds/Data/Accessibility Destinations/Scotland Accessability/pharmacies_3938402/pub_pharm.shp")
+pharm$uprn <- as.character(pharm$uprn)
+pharm <- st_transform(pharm, 4326)
+saveRDS(pharm,"data/pharmacy_scotland.Rds")
+
 

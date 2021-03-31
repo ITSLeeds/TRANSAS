@@ -38,7 +38,9 @@ otp_dl_demo("D:/OneDrive - University of Leeds/Data/opentripplanner")
 log1 = otp_build_graph(path_opt,
                 path_data,
                 memory = 80000,
-                router = "great-britain")
+                router = "great-britain2",
+                quiet = FALSE)
+#java -Xmx80000M -d64 -jar "D:/OneDrive - University of Leeds/Data/opentripplanner/otp-1.5.0-shaded.jar" --build "D:/OneDrive - University of Leeds/Data/opentripplanner/graphs/great-britain2"
 
 # Parse the logs
 
@@ -49,7 +51,7 @@ log_summary <- log_summary[order(log_summary$Freq, decreasing = TRUE),]
 
 log2 = otp_setup(path_opt,
           path_data,
-          router = "great-britain",
+          router = "great-britain2",
           securePort = 8082,
           analyst = TRUE,
           memory = 80000,

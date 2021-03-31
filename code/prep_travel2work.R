@@ -20,3 +20,27 @@ od_summ[3:13] <- lapply(od_summ[3:13], function(x){
 })
 
 saveRDS(od_summ,"data/travel2work.Rds")
+
+
+jt2_scot <- read.csv("D:/OneDrive - University of Leeds/Data/Scotland Census/SNS Data Zone 2011 std/QS702SC.csv",
+                     header = FALSE)
+
+names(jt2_scot) <- jt2_scot[4,]
+names(jt2_scot)[1] <- "DataZone"
+jt2_scot <- jt2_scot[6:(nrow(jt2_scot) -4),]
+jt2_scot[2:13] <- lapply(jt2_scot[2:13], as.numeric)
+names(jt2_scot) <- c("DataZone","AllMethods","WorkAtHome",
+                     "Underground", "Train","Bus",
+                     "Taxi","CarOrVan","Passenger",
+                     "Motorcycle","Bicycle","OnFoot",
+                     "Other")
+
+jt2_scot[3:13] <- lapply(jt2_scot[3:13], function(x){
+  round(x / jt2_scot$AllMethods * 100, 2)
+})
+
+saveRDS(jt2_scot,"data/travel2work_scot.Rds")
+
+foo = rowSums(jt2_scot[,3:13], na.rm = TRUE)
+
+
